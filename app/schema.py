@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -35,3 +36,5 @@ class IssueOut(BaseModel):
     description: str
     priority: IssuePriority
     status: IssueStatus
+    created_at: datetime
+    updated_at: datetime

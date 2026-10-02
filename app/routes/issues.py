@@ -1,78 +1,68 @@
-import uuid
-from fastapi import APIRouter, HTTPException, status
-from app.schema import IssueStatus, IssueOut, IssueCreate, IssueUpdate
-from app.storage import save_data, load_data
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.repositories import JsonIssueRepository
+from app.schema import IssueCreate, IssueOut, IssueUpdate
+from app.services import IssueNotFoundError, IssueService
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
+issue_service = IssueService(JsonIssueRepository())
+
+
+def get_issue_service() -> IssueService:
+    return issue_service
+
+
+IssueServiceDependency = Annotated[IssueService, Depends(get_issue_service)]
+
+
+def not_found() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Issue not found",
+    )
+
 
 @router.get("/", response_model=list[IssueOut])
-def index():
-    """ Return all issues """
-    issues = load_data()
-    return issues
+def index(service: IssueServiceDependency):
+    """Return all issues."""
+    return service.list_issues()
 
 
-@router.get('/{issue_id}', response_model=IssueOut, status_code=status.HTTP_200_OK)
-def get_issue(issue_id: str):
-    """
-    Get single issue by ID
-    Raises 404 if issue not found
-    """
-    issues = load_data()
-    for issue in issues:
-        if issue["id"] == issue_id:
-            return issue
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issue not found")
+@router.get("/{issue_id}", response_model=IssueOut)
+def get_issue(issue_id: str, service: IssueServiceDependency):
+    """Return one issue by ID."""
+    try:
+        return service.get_issue(issue_id)
+    except IssueNotFoundError as error:
+        raise not_found() from error
 
 
 @router.post("/", response_model=IssueOut, status_code=status.HTTP_201_CREATED)
-def create_issue(payload: IssueCreate):
-    """
-    Create a new issue
-    The issue is persisted to data/issues.json
-    """
-    issues = load_data()
-    new_issue = {
-        "id": str(uuid.uuid4()),
-        "title": payload.title,
-        "description": payload.description,
-        "priority": payload.priority,
-        "status": IssueStatus.open
-    }
-    issues.append(new_issue)
-    save_data(issues)
-    return new_issue
+def create_issue(payload: IssueCreate, service: IssueServiceDependency):
+    """Create and persist an issue."""
+    return service.create_issue(payload)
 
 
-@router.patch('/{issue_id}', response_model=IssueOut, status_code=status.HTTP_200_OK)
-def update_issue(issue_id: str, payload: IssueUpdate):
-    """ Update an existing issue """
-    issues = load_data()
-    for index, issue in enumerate(issues):
-        if issue["id"] == issue_id:
-            updated_issue = issue.copy()
-            if payload.title is not None:
-                updated_issue["title"] = payload.title
-            if payload.description is not None:
-                updated_issue["description"] = payload.description
-            if payload.priority is not None:
-                updated_issue["priority"] = payload.priority
-            if payload.status is not None:
-                updated_issue["status"] = payload.status
-            issues[index] = updated_issue
-            save_data(issues)
-            return updated_issue
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issue not found")
+@router.patch("/{issue_id}", response_model=IssueOut)
+def update_issue(
+    issue_id: str,
+    payload: IssueUpdate,
+    service: IssueServiceDependency,
+):
+    """Partially update an issue."""
+    try:
+        return service.update_issue(issue_id, payload)
+    except IssueNotFoundError as error:
+        raise not_found() from error
 
 
-@router.delete('/{issue_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_issue(issue_id: str):
+@router.delete("/{issue_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_issue(issue_id: str, service: IssueServiceDependency):
     """Delete an issue by ID."""
-    issues = load_data()
-    for index, issue in enumerate(issues):
-        if issue["id"] == issue_id:
-            issues.pop(index)
-            save_data(issues)
-            return
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issue not found")
+    try:
+        service.delete_issue(issue_id)
+    except IssueNotFoundError as error:
+        raise not_found() from error
