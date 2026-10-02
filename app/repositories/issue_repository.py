@@ -58,7 +58,9 @@ class JsonIssueRepository:
             issue for issue in self.list_all() if issue.get("owner_id") == owner_id
         ]
         if issue_status is not None:
-            issues = [issue for issue in issues if issue["status"] == issue_status.value]
+            issues = [
+                issue for issue in issues if issue["status"] == issue_status.value
+            ]
         if priority is not None:
             issues = [issue for issue in issues if issue["priority"] == priority.value]
         if search:

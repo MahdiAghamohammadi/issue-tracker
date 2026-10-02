@@ -20,11 +20,16 @@ from app.services import IssueNotFoundError, IssueService
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
+
 def get_issue_service(session: Annotated[Session, Depends(get_db)]) -> IssueService:
     return IssueService(SQLAlchemyIssueRepository(session))
 
 
 IssueServiceDependency = Annotated[IssueService, Depends(get_issue_service)]
+IssueStatusQuery = Annotated[IssueStatus | None, Query(alias="status")]
+SearchQuery = Annotated[str | None, Query(min_length=1, max_length=100)]
+LimitQuery = Annotated[int, Query(ge=1, le=100)]
+OffsetQuery = Annotated[int, Query(ge=0)]
 
 
 def not_found() -> HTTPException:
@@ -38,13 +43,13 @@ def not_found() -> HTTPException:
 def index(
     service: IssueServiceDependency,
     current_user: CurrentUser,
-    issue_status: IssueStatus | None = Query(default=None, alias="status"),
+    issue_status: IssueStatusQuery = None,
     priority: IssuePriority | None = None,
-    search: str | None = Query(default=None, min_length=1, max_length=100),
+    search: SearchQuery = None,
     sort_by: IssueSortField = IssueSortField.created_at,
     sort_direction: SortDirection = SortDirection.desc,
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: LimitQuery = 20,
+    offset: OffsetQuery = 0,
 ):
     """Return filtered, sorted, and paginated issues."""
     return service.list_issues(

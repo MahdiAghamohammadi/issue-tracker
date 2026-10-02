@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.repositories.issue_repository import IssueData, IssueRepository
@@ -57,7 +57,7 @@ class IssueService:
         return issue
 
     def create_issue(self, payload: IssueCreate, owner_id: str) -> IssueData:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         issue: IssueData = {
             "id": str(uuid4()),
             "owner_id": owner_id,
@@ -72,7 +72,7 @@ class IssueService:
         self, issue_id: str, payload: IssueUpdate, owner_id: str
     ) -> IssueData:
         changes = payload.model_dump(exclude_none=True, mode="json")
-        changes["updated_at"] = datetime.now(timezone.utc).isoformat()
+        changes["updated_at"] = datetime.now(UTC).isoformat()
         issue = self.repository.update(issue_id, owner_id, changes)
         if issue is None:
             raise IssueNotFoundError

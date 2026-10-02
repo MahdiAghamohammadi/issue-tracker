@@ -1,7 +1,7 @@
-from pathlib import Path
 import json
 import os
 import tempfile
+from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_FILE = DATA_DIR / "issues.json"

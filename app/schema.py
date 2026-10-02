@@ -1,19 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field
-from typing import Optional
 from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 
 class IssueStatus(str, Enum):
-    open = "open",
-    in_progress = "in_progress",
-    closed = "closed",
+    open = ("open",)
+    in_progress = ("in_progress",)
+    closed = ("closed",)
 
 
 class IssuePriority(str, Enum):
-    low = "low",
-    medium = "medium",
+    low = ("low",)
+    medium = ("medium",)
     high = "high"
 
 
@@ -37,10 +37,10 @@ class IssueCreate(BaseModel):
 
 
 class IssueUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, min_length=3, max_length=100)
-    description: Optional[str] = Field(default=None, min_length=5, max_length=1000)
-    priority: Optional[IssuePriority] = None
-    status: Optional[IssueStatus] = None
+    title: str | None = Field(default=None, min_length=3, max_length=100)
+    description: str | None = Field(default=None, min_length=5, max_length=1000)
+    priority: IssuePriority | None = None
+    status: IssueStatus | None = None
 
 
 class IssueOut(BaseModel):
