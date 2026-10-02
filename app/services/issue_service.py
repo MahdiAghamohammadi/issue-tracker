@@ -31,39 +31,18 @@ class IssueService:
         limit: int = 20,
         offset: int = 0,
     ) -> dict[str, object]:
-        issues = self.repository.list_all()
-
-        if issue_status is not None:
-            issues = [issue for issue in issues if issue["status"] == issue_status.value]
-        if priority is not None:
-            issues = [issue for issue in issues if issue["priority"] == priority.value]
-        if search:
-            query = search.casefold().strip()
-            issues = [
-                issue
-                for issue in issues
-                if query in issue["title"].casefold()
-                or query in issue["description"].casefold()
-            ]
-
-        priority_rank = {"low": 1, "medium": 2, "high": 3}
-
-        def sort_value(issue: IssueData):
-            value = issue[sort_by.value]
-            if sort_by is IssueSortField.priority:
-                return priority_rank[value]
-            if isinstance(value, str):
-                return value.casefold()
-            return value
-
-        issues.sort(
-            key=sort_value,
-            reverse=sort_direction is SortDirection.desc,
+        issues, total = self.repository.list_page(
+            issue_status=issue_status,
+            priority=priority,
+            search=search,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+            limit=limit,
+            offset=offset,
         )
-        total = len(issues)
 
         return {
-            "items": issues[offset : offset + limit],
+            "items": issues,
             "total": total,
             "limit": limit,
             "offset": offset,

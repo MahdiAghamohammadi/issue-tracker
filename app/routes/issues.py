@@ -1,8 +1,10 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
-from app.repositories import JsonIssueRepository
+from app.database import get_db
+from app.repositories import SQLAlchemyIssueRepository
 from app.schema import (
     IssueCreate,
     IssueOut,
@@ -17,11 +19,8 @@ from app.services import IssueNotFoundError, IssueService
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
-issue_service = IssueService(JsonIssueRepository())
-
-
-def get_issue_service() -> IssueService:
-    return issue_service
+def get_issue_service(session: Annotated[Session, Depends(get_db)]) -> IssueService:
+    return IssueService(SQLAlchemyIssueRepository(session))
 
 
 IssueServiceDependency = Annotated[IssueService, Depends(get_issue_service)]

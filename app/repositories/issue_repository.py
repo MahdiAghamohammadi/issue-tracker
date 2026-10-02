@@ -1,12 +1,28 @@
 from typing import Any, Protocol
 
+from app.schema import (
+    IssuePriority,
+    IssueSortField,
+    IssueStatus,
+    SortDirection,
+)
 from app.storage import load_data, save_data
 
 IssueData = dict[str, Any]
 
 
 class IssueRepository(Protocol):
-    def list_all(self) -> list[IssueData]: ...
+    def list_page(
+        self,
+        *,
+        issue_status: IssueStatus | None,
+        priority: IssuePriority | None,
+        search: str | None,
+        sort_by: IssueSortField,
+        sort_direction: SortDirection,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[IssueData], int]: ...
 
     def get(self, issue_id: str) -> IssueData | None: ...
 
@@ -22,6 +38,47 @@ class JsonIssueRepository:
 
     def list_all(self) -> list[IssueData]:
         return load_data()
+
+    def list_page(
+        self,
+        *,
+        issue_status: IssueStatus | None,
+        priority: IssuePriority | None,
+        search: str | None,
+        sort_by: IssueSortField,
+        sort_direction: SortDirection,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[IssueData], int]:
+        issues = self.list_all()
+        if issue_status is not None:
+            issues = [issue for issue in issues if issue["status"] == issue_status.value]
+        if priority is not None:
+            issues = [issue for issue in issues if issue["priority"] == priority.value]
+        if search:
+            query = search.casefold().strip()
+            issues = [
+                issue
+                for issue in issues
+                if query in issue["title"].casefold()
+                or query in issue["description"].casefold()
+            ]
+
+        priority_rank = {"low": 1, "medium": 2, "high": 3}
+
+        def sort_value(issue: IssueData):
+            value = issue[sort_by.value]
+            if sort_by is IssueSortField.priority:
+                return priority_rank[value]
+            if isinstance(value, str):
+                return value.casefold()
+            return value
+
+        issues.sort(
+            key=sort_value,
+            reverse=sort_direction is SortDirection.desc,
+        )
+        return issues[offset : offset + limit], len(issues)
 
     def get(self, issue_id: str) -> IssueData | None:
         return next(
