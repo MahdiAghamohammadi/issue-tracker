@@ -4,3 +4,8 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=app --cov-report=term-missing --cov-fail-under=85"
+asyncio_mode = "auto"
+testpaths = ["tests"]

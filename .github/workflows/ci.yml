@@ -24,6 +24,8 @@ jobs:
         run: ruff check .
       - name: Check formatting
         run: ruff format --check .
+      - name: Run tests
+        run: pytest
       - name: Compile Python sources
         run: python -m compileall -q app migrations main.py
       - name: Validate migrations

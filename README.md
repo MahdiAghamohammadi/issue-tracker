@@ -16,7 +16,8 @@ and continuous integration.
 - PostgreSQL persistence through SQLAlchemy 2
 - Versioned database migrations with Alembic
 - Docker Compose development stack
-- Ruff, dependency, migration, compilation, and image-build CI checks
+- Comprehensive API, authorization, repository, and security tests
+- Ruff, test, dependency, migration, compilation, and image-build CI checks
 - Automatic OpenAPI documentation
 
 ## Technology stack
@@ -200,14 +201,26 @@ Run the local CI checks with:
 ```bash
 ruff check .
 ruff format --check .
+pytest
 python -m pip check
 python -m compileall -q app migrations main.py
 alembic upgrade head --sql > /dev/null
 docker build --tag issue-tracker:local .
 ```
 
-GitHub Actions runs these checks for every push and pull request. The full
-automated application test suite is planned as the next project milestone.
+GitHub Actions runs these checks for every push and pull request. Tests use an
+isolated in-memory database and enforce a minimum application coverage of 85%.
+They do not read or modify the development PostgreSQL database.
+
+The suite covers:
+
+- Registration, login, current-user resolution, and invalid credentials
+- Password hashing, valid JWTs, missing claims, and expired JWTs
+- Issue CRUD operations and request validation
+- Cross-user authorization boundaries
+- Filtering, searching, sorting, and pagination
+- SQLAlchemy and JSON repository behavior
+- Health and timing middleware behavior
 
 ## Project layout
 
@@ -243,7 +256,6 @@ request flows, data ownership, security boundaries, and design decisions.
 
 ## Current roadmap
 
-- Automated unit and integration tests
 - Refresh-token rotation and token revocation
 - Project membership and role-based permissions
 - Structured logging and request IDs

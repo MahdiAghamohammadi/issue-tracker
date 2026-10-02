@@ -173,12 +173,13 @@ and generated data from entering the build context.
 GitHub Actions contains two independent jobs:
 
 - **quality** installs development dependencies, checks dependency consistency,
-  runs Ruff, compiles Python sources, and renders all migrations as PostgreSQL
-  SQL without changing a database.
+  runs Ruff and the automated test suite, compiles Python sources, and renders
+  all migrations as PostgreSQL SQL without changing a database.
 - **container** builds the same Docker image used by Compose.
 
-Application unit and integration tests are intentionally deferred to the next
-milestone and should be added to the quality job when implemented.
+API integration tests override the request-scoped database dependency with an
+isolated in-memory database. Unit tests cover security primitives and the JSON
+repository. Coverage is measured across `app/` and must remain at or above 85%.
 
 ## Known tradeoffs
 
