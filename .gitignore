@@ -1,6 +1,19 @@
 .idea/
 .vscode/
+.agents/
+.codex/
 data/
+.ruff_cache/
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -49,6 +62,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 *.cover
 *.py,cover
 .hypothesis/
@@ -64,6 +78,8 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.sqlite
+*.sqlite3
 
 # Flask stuff:
 instance/
@@ -126,7 +142,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -164,4 +179,3 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-
