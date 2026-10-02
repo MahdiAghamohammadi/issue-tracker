@@ -17,6 +17,19 @@ class IssuePriority(str, Enum):
     high = "high"
 
 
+class IssueSortField(str, Enum):
+    created_at = "created_at"
+    updated_at = "updated_at"
+    title = "title"
+    priority = "priority"
+    status = "status"
+
+
+class SortDirection(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
 class IssueCreate(BaseModel):
     title: str = Field(min_length=3, max_length=100)
     description: str = Field(min_length=5, max_length=1000)
@@ -38,3 +51,10 @@ class IssueOut(BaseModel):
     status: IssueStatus
     created_at: datetime
     updated_at: datetime
+
+
+class IssuePageOut(BaseModel):
+    items: list[IssueOut]
+    total: int
+    limit: int
+    offset: int

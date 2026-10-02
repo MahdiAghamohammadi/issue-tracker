@@ -1,9 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.repositories import JsonIssueRepository
-from app.schema import IssueCreate, IssueOut, IssueUpdate
+from app.schema import (
+    IssueCreate,
+    IssueOut,
+    IssuePageOut,
+    IssuePriority,
+    IssueSortField,
+    IssueStatus,
+    IssueUpdate,
+    SortDirection,
+)
 from app.services import IssueNotFoundError, IssueService
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
@@ -25,10 +34,27 @@ def not_found() -> HTTPException:
     )
 
 
-@router.get("/", response_model=list[IssueOut])
-def index(service: IssueServiceDependency):
-    """Return all issues."""
-    return service.list_issues()
+@router.get("/", response_model=IssuePageOut)
+def index(
+    service: IssueServiceDependency,
+    issue_status: IssueStatus | None = Query(default=None, alias="status"),
+    priority: IssuePriority | None = None,
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    sort_by: IssueSortField = IssueSortField.created_at,
+    sort_direction: SortDirection = SortDirection.desc,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    """Return filtered, sorted, and paginated issues."""
+    return service.list_issues(
+        issue_status=issue_status,
+        priority=priority,
+        search=search,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{issue_id}", response_model=IssueOut)

@@ -2,7 +2,14 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.repositories.issue_repository import IssueData, IssueRepository
-from app.schema import IssueCreate, IssueStatus, IssueUpdate
+from app.schema import (
+    IssueCreate,
+    IssuePriority,
+    IssueSortField,
+    IssueStatus,
+    IssueUpdate,
+    SortDirection,
+)
 
 
 class IssueNotFoundError(Exception):
@@ -13,8 +20,54 @@ class IssueService:
     def __init__(self, repository: IssueRepository) -> None:
         self.repository = repository
 
-    def list_issues(self) -> list[IssueData]:
-        return self.repository.list_all()
+    def list_issues(
+        self,
+        *,
+        issue_status: IssueStatus | None = None,
+        priority: IssuePriority | None = None,
+        search: str | None = None,
+        sort_by: IssueSortField = IssueSortField.created_at,
+        sort_direction: SortDirection = SortDirection.desc,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict[str, object]:
+        issues = self.repository.list_all()
+
+        if issue_status is not None:
+            issues = [issue for issue in issues if issue["status"] == issue_status.value]
+        if priority is not None:
+            issues = [issue for issue in issues if issue["priority"] == priority.value]
+        if search:
+            query = search.casefold().strip()
+            issues = [
+                issue
+                for issue in issues
+                if query in issue["title"].casefold()
+                or query in issue["description"].casefold()
+            ]
+
+        priority_rank = {"low": 1, "medium": 2, "high": 3}
+
+        def sort_value(issue: IssueData):
+            value = issue[sort_by.value]
+            if sort_by is IssueSortField.priority:
+                return priority_rank[value]
+            if isinstance(value, str):
+                return value.casefold()
+            return value
+
+        issues.sort(
+            key=sort_value,
+            reverse=sort_direction is SortDirection.desc,
+        )
+        total = len(issues)
+
+        return {
+            "items": issues[offset : offset + limit],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
 
     def get_issue(self, issue_id: str) -> IssueData:
         issue = self.repository.get(issue_id)
