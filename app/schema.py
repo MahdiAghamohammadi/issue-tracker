@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional
+from uuid import UUID
 
 
 class IssueStatus(str, Enum):
@@ -22,12 +23,14 @@ class IssueCreate(BaseModel):
 
 
 class IssueUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=1000)
+    title: Optional[str] = Field(default=None, min_length=3, max_length=100)
+    description: Optional[str] = Field(default=None, min_length=5, max_length=1000)
     priority: Optional[IssuePriority] = None
     status: Optional[IssueStatus] = None
 
+
 class IssueOut(BaseModel):
+    id: UUID
     title: str
     description: str
     priority: IssuePriority
