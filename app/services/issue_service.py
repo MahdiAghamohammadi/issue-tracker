@@ -23,6 +23,7 @@ class IssueService:
     def list_issues(
         self,
         *,
+        owner_id: str,
         issue_status: IssueStatus | None = None,
         priority: IssuePriority | None = None,
         search: str | None = None,
@@ -32,6 +33,7 @@ class IssueService:
         offset: int = 0,
     ) -> dict[str, object]:
         issues, total = self.repository.list_page(
+            owner_id=owner_id,
             issue_status=issue_status,
             priority=priority,
             search=search,
@@ -48,16 +50,17 @@ class IssueService:
             "offset": offset,
         }
 
-    def get_issue(self, issue_id: str) -> IssueData:
-        issue = self.repository.get(issue_id)
+    def get_issue(self, issue_id: str, owner_id: str) -> IssueData:
+        issue = self.repository.get(issue_id, owner_id)
         if issue is None:
             raise IssueNotFoundError
         return issue
 
-    def create_issue(self, payload: IssueCreate) -> IssueData:
+    def create_issue(self, payload: IssueCreate, owner_id: str) -> IssueData:
         now = datetime.now(timezone.utc).isoformat()
         issue: IssueData = {
             "id": str(uuid4()),
+            "owner_id": owner_id,
             **payload.model_dump(mode="json"),
             "status": IssueStatus.open.value,
             "created_at": now,
@@ -65,14 +68,16 @@ class IssueService:
         }
         return self.repository.create(issue)
 
-    def update_issue(self, issue_id: str, payload: IssueUpdate) -> IssueData:
+    def update_issue(
+        self, issue_id: str, payload: IssueUpdate, owner_id: str
+    ) -> IssueData:
         changes = payload.model_dump(exclude_none=True, mode="json")
         changes["updated_at"] = datetime.now(timezone.utc).isoformat()
-        issue = self.repository.update(issue_id, changes)
+        issue = self.repository.update(issue_id, owner_id, changes)
         if issue is None:
             raise IssueNotFoundError
         return issue
 
-    def delete_issue(self, issue_id: str) -> None:
-        if not self.repository.delete(issue_id):
+    def delete_issue(self, issue_id: str, owner_id: str) -> None:
+        if not self.repository.delete(issue_id, owner_id):
             raise IssueNotFoundError

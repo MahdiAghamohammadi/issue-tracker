@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import CurrentUser
 from app.repositories import SQLAlchemyIssueRepository
 from app.schema import (
     IssueCreate,
@@ -36,6 +37,7 @@ def not_found() -> HTTPException:
 @router.get("/", response_model=IssuePageOut)
 def index(
     service: IssueServiceDependency,
+    current_user: CurrentUser,
     issue_status: IssueStatus | None = Query(default=None, alias="status"),
     priority: IssuePriority | None = None,
     search: str | None = Query(default=None, min_length=1, max_length=100),
@@ -46,6 +48,7 @@ def index(
 ):
     """Return filtered, sorted, and paginated issues."""
     return service.list_issues(
+        owner_id=current_user["id"],
         issue_status=issue_status,
         priority=priority,
         search=search,
@@ -57,18 +60,26 @@ def index(
 
 
 @router.get("/{issue_id}", response_model=IssueOut)
-def get_issue(issue_id: str, service: IssueServiceDependency):
+def get_issue(
+    issue_id: str,
+    service: IssueServiceDependency,
+    current_user: CurrentUser,
+):
     """Return one issue by ID."""
     try:
-        return service.get_issue(issue_id)
+        return service.get_issue(issue_id, current_user["id"])
     except IssueNotFoundError as error:
         raise not_found() from error
 
 
 @router.post("/", response_model=IssueOut, status_code=status.HTTP_201_CREATED)
-def create_issue(payload: IssueCreate, service: IssueServiceDependency):
+def create_issue(
+    payload: IssueCreate,
+    service: IssueServiceDependency,
+    current_user: CurrentUser,
+):
     """Create and persist an issue."""
-    return service.create_issue(payload)
+    return service.create_issue(payload, current_user["id"])
 
 
 @router.patch("/{issue_id}", response_model=IssueOut)
@@ -76,18 +87,23 @@ def update_issue(
     issue_id: str,
     payload: IssueUpdate,
     service: IssueServiceDependency,
+    current_user: CurrentUser,
 ):
     """Partially update an issue."""
     try:
-        return service.update_issue(issue_id, payload)
+        return service.update_issue(issue_id, payload, current_user["id"])
     except IssueNotFoundError as error:
         raise not_found() from error
 
 
 @router.delete("/{issue_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_issue(issue_id: str, service: IssueServiceDependency):
+def delete_issue(
+    issue_id: str,
+    service: IssueServiceDependency,
+    current_user: CurrentUser,
+):
     """Delete an issue by ID."""
     try:
-        service.delete_issue(issue_id)
+        service.delete_issue(issue_id, current_user["id"])
     except IssueNotFoundError as error:
         raise not_found() from error

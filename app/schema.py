@@ -45,6 +45,7 @@ class IssueUpdate(BaseModel):
 
 class IssueOut(BaseModel):
     id: UUID
+    owner_id: UUID
     title: str
     description: str
     priority: IssuePriority

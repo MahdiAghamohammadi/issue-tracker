@@ -24,6 +24,7 @@ class SQLAlchemyIssueRepository:
     def _to_dict(issue: Issue) -> IssueData:
         return {
             "id": str(issue.id),
+            "owner_id": str(issue.owner_id) if issue.owner_id is not None else None,
             "title": issue.title,
             "description": issue.description,
             "priority": issue.priority.value,
@@ -52,6 +53,7 @@ class SQLAlchemyIssueRepository:
     def list_page(
         self,
         *,
+        owner_id: str,
         issue_status: IssueStatus | None,
         priority: IssuePriority | None,
         search: str | None,
@@ -60,7 +62,8 @@ class SQLAlchemyIssueRepository:
         limit: int,
         offset: int,
     ) -> tuple[list[IssueData], int]:
-        filters = []
+        parsed_owner_id = UUID(owner_id)
+        filters = [Issue.owner_id == parsed_owner_id]
         if issue_status is not None:
             filters.append(Issue.status == issue_status)
         if priority is not None:
@@ -105,11 +108,16 @@ class SQLAlchemyIssueRepository:
         issues = self.session.scalars(statement).all()
         return [self._to_dict(issue) for issue in issues], total or 0
 
-    def get(self, issue_id: str) -> IssueData | None:
+    def get(self, issue_id: str, owner_id: str) -> IssueData | None:
         parsed_id = self._parse_id(issue_id)
         if parsed_id is None:
             return None
-        issue = self.session.get(Issue, parsed_id)
+        issue = self.session.scalar(
+            select(Issue).where(
+                Issue.id == parsed_id,
+                Issue.owner_id == UUID(owner_id),
+            )
+        )
         return self._to_dict(issue) if issue is not None else None
 
     def create(self, issue: IssueData) -> IssueData:
@@ -117,6 +125,7 @@ class SQLAlchemyIssueRepository:
             **{
                 **issue,
                 "id": UUID(issue["id"]),
+                "owner_id": UUID(issue["owner_id"]),
                 "created_at": self._parse_datetime(issue["created_at"]),
                 "updated_at": self._parse_datetime(issue["updated_at"]),
             }
@@ -126,11 +135,18 @@ class SQLAlchemyIssueRepository:
         self.session.refresh(model)
         return self._to_dict(model)
 
-    def update(self, issue_id: str, changes: IssueData) -> IssueData | None:
+    def update(
+        self, issue_id: str, owner_id: str, changes: IssueData
+    ) -> IssueData | None:
         parsed_id = self._parse_id(issue_id)
         if parsed_id is None:
             return None
-        issue = self.session.get(Issue, parsed_id)
+        issue = self.session.scalar(
+            select(Issue).where(
+                Issue.id == parsed_id,
+                Issue.owner_id == UUID(owner_id),
+            )
+        )
         if issue is None:
             return None
 
@@ -143,11 +159,16 @@ class SQLAlchemyIssueRepository:
         self.session.refresh(issue)
         return self._to_dict(issue)
 
-    def delete(self, issue_id: str) -> bool:
+    def delete(self, issue_id: str, owner_id: str) -> bool:
         parsed_id = self._parse_id(issue_id)
         if parsed_id is None:
             return False
-        issue = self.session.get(Issue, parsed_id)
+        issue = self.session.scalar(
+            select(Issue).where(
+                Issue.id == parsed_id,
+                Issue.owner_id == UUID(owner_id),
+            )
+        )
         if issue is None:
             return False
         self.session.delete(issue)

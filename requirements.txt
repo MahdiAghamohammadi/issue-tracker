@@ -46,3 +46,5 @@ websockets==17.1
 SQLAlchemy==2.0.44
 alembic==1.17.0
 psycopg[binary]==3.2.10
+pwdlib[argon2]==0.3.0
+PyJWT==2.10.1

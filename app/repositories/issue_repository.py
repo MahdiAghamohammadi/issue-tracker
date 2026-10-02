@@ -15,6 +15,7 @@ class IssueRepository(Protocol):
     def list_page(
         self,
         *,
+        owner_id: str,
         issue_status: IssueStatus | None,
         priority: IssuePriority | None,
         search: str | None,
@@ -24,13 +25,15 @@ class IssueRepository(Protocol):
         offset: int,
     ) -> tuple[list[IssueData], int]: ...
 
-    def get(self, issue_id: str) -> IssueData | None: ...
+    def get(self, issue_id: str, owner_id: str) -> IssueData | None: ...
 
     def create(self, issue: IssueData) -> IssueData: ...
 
-    def update(self, issue_id: str, changes: IssueData) -> IssueData | None: ...
+    def update(
+        self, issue_id: str, owner_id: str, changes: IssueData
+    ) -> IssueData | None: ...
 
-    def delete(self, issue_id: str) -> bool: ...
+    def delete(self, issue_id: str, owner_id: str) -> bool: ...
 
 
 class JsonIssueRepository:
@@ -42,6 +45,7 @@ class JsonIssueRepository:
     def list_page(
         self,
         *,
+        owner_id: str,
         issue_status: IssueStatus | None,
         priority: IssuePriority | None,
         search: str | None,
@@ -50,7 +54,9 @@ class JsonIssueRepository:
         limit: int,
         offset: int,
     ) -> tuple[list[IssueData], int]:
-        issues = self.list_all()
+        issues = [
+            issue for issue in self.list_all() if issue.get("owner_id") == owner_id
+        ]
         if issue_status is not None:
             issues = [issue for issue in issues if issue["status"] == issue_status.value]
         if priority is not None:
@@ -80,9 +86,13 @@ class JsonIssueRepository:
         )
         return issues[offset : offset + limit], len(issues)
 
-    def get(self, issue_id: str) -> IssueData | None:
+    def get(self, issue_id: str, owner_id: str) -> IssueData | None:
         return next(
-            (issue for issue in self.list_all() if issue["id"] == issue_id),
+            (
+                issue
+                for issue in self.list_all()
+                if issue["id"] == issue_id and issue.get("owner_id") == owner_id
+            ),
             None,
         )
 
@@ -92,20 +102,22 @@ class JsonIssueRepository:
         save_data(issues)
         return issue
 
-    def update(self, issue_id: str, changes: IssueData) -> IssueData | None:
+    def update(
+        self, issue_id: str, owner_id: str, changes: IssueData
+    ) -> IssueData | None:
         issues = self.list_all()
         for index, issue in enumerate(issues):
-            if issue["id"] == issue_id:
+            if issue["id"] == issue_id and issue.get("owner_id") == owner_id:
                 updated_issue = {**issue, **changes}
                 issues[index] = updated_issue
                 save_data(issues)
                 return updated_issue
         return None
 
-    def delete(self, issue_id: str) -> bool:
+    def delete(self, issue_id: str, owner_id: str) -> bool:
         issues = self.list_all()
         for index, issue in enumerate(issues):
-            if issue["id"] == issue_id:
+            if issue["id"] == issue_id and issue.get("owner_id") == owner_id:
                 issues.pop(index)
                 save_data(issues)
                 return True
